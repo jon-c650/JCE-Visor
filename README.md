@@ -1,8 +1,22 @@
-# JCE Visor for macOS
+<p align="center">
+  <img src="Resources/VisorIcon.png" alt="JCE Visor icon" width="128">
+</p>
+
+<h1 align="center">JCE Visor for macOS</h1>
+
+<p align="center"><strong>A fast, lightweight drop-down terminal for macOS.</strong></p>
 
 JCE Visor is a fast, lightweight drop-down terminal for macOS. Press **Option–Space** to smoothly summon persistent shell and SSH sessions from any screen, then click outside the panel when you want it out of the way. Your sessions keep running while JCE Visor is hidden.
 
 Visor is currently a prerelease app. Version 1.0 release preparation, signing, and notarization are in progress.
+
+![JCE Visor terminal](Resources/jce-visor-hero.png)
+
+## Download
+
+**Xcode is not required to run JCE Visor.** Regular users will download the finished `Visor.app` from the [Releases page](../../releases), move it to Applications, and launch it like any other Mac app.
+
+The first signed release is still being prepared. Xcode or Apple command-line developer tools are only required when building JCE Visor from source.
 
 ## Run it
 
@@ -44,6 +58,12 @@ open outputs/Visor.app
 The app includes a customizable global shortcut, persistent shell and SSH sessions, saved SSH bookmarks, independent terminal state per tab, multi-display placement, configurable auto-hide, panel sizing, translucency, and a green-on-black terminal. Terminal input and VT rendering use a locally bundled xterm.js runtime.
 
 The remaining version 1.0 work is tracked in [PLAN.md](PLAN.md). Distribution signing and notarization require an Apple Developer Program signing identity and are intentionally separate from local development builds.
+
+## Settings
+
+JCE Visor lets you control automatic hiding, lock the panel to a chosen display, adjust opacity, change the global shortcut, and resize terminal text.
+
+![JCE Visor settings](Resources/jce-visor-settings.png)
 
 ## Third-party software
 
