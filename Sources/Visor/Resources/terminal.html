@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <style>
+    html, body, #terminal { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { padding: 8px 10px; box-sizing: border-box; }
+    #terminal { box-sizing: border-box; }
+    .xterm, .xterm-viewport, .xterm-screen { background: transparent !important; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script src="vendor/xterm.js"></script>
+  <script src="vendor/addon-fit.js"></script>
+  <script src="terminal-input.js"></script>
+  <script>
+    const term = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'block',
+      convertEol: false,
+      scrollback: 10000,
+      allowTransparency: true,
+      fontFamily: 'SFMono-Regular, Menlo, Monaco, monospace',
+      fontSize: 14,
+      macOptionIsMeta: true,
+      macOptionClickForcesSelection: true,
+      rightClickSelectsWord: true,
+      screenReaderMode: true,
+      theme: { background: '#00000000', foreground: '#40ff59', cursor: '#74ff86', selectionBackground: '#40ff5944' }
+    });
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    term.onResize(size => window.webkit.messageHandlers.terminalResize.postMessage(size));
+    VisorInput.install(term, {
+      sendText: data => window.webkit.messageHandlers.terminalInput.postMessage(data),
+      sendBinary: data => window.webkit.messageHandlers.terminalBinary.postMessage(data),
+      copy: text => window.webkit.messageHandlers.terminalCopy.postMessage(text),
+      requestPaste: () => window.webkit.messageHandlers.terminalPasteRequest.postMessage(null)
+    }, document);
+    term.onBell(() => window.webkit.messageHandlers.terminalBell.postMessage(null));
+    term.onTitleChange(title => window.webkit.messageHandlers.terminalTitle.postMessage(title));
+    window.writeBase64 = value => {
+      const raw = atob(value);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      term.write(bytes);
+    };
+    window.replaceBase64 = value => {
+      term.reset();
+      window.writeBase64(value);
+    };
+    window.fitTerminal = () => { fitAddon.fit(); term.focus(); };
+    window.focusTerminal = () => term.focus();
+    window.clearTerminal = () => term.reset();
+    window.clearScrollback = () => term.clear();
+    window.selectAllTerminal = () => term.selectAll();
+    window.getTerminalSelection = () => term.getSelection();
+    window.pasteText = value => term.paste(value);
+    window.setFontSize = value => { term.options.fontSize = value; fitAddon.fit(); };
+    new ResizeObserver(() => fitAddon.fit()).observe(document.getElementById('terminal'));
+    requestAnimationFrame(() => {
+      fitAddon.fit();
+      term.focus();
+      window.webkit.messageHandlers.terminalReady.postMessage({ cols: term.cols, rows: term.rows });
+    });
+  </script>
+</body>
+</html>

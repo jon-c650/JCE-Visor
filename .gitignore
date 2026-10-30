@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+outputs/
+
+# Xcode user and generated state
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# SwiftPM editor metadata
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+.swiftpm/configuration/registries.json
+

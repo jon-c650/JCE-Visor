@@ -1,6 +1,6 @@
-# Visor for macOS
+# JCE Visor for macOS
 
-Visor is a lightweight drop-down terminal for macOS with its own Dock and Finder icon. Press **Option–Space** to smoothly show or hide a full-width terminal panel below the menu bar. Clicking outside Visor hides it automatically. Shell processes remain alive while the panel is hidden.
+JCE Visor is a fast, lightweight drop-down terminal for macOS. Press **Option–Space** to smoothly summon persistent shell and SSH sessions from any screen, then click outside the panel when you want it out of the way. Your sessions keep running while JCE Visor is hidden.
 
 Visor is currently a prerelease app. Version 1.0 release preparation, signing, and notarization are in progress.
 
