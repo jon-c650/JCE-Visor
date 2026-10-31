@@ -15,6 +15,7 @@
 - [x] Preserve per-tab scrollback when switching tabs
 - [ ] Add tab reordering (deferred; fixed tabs are more reliable)
 - [x] Add saved SSH connection bookmarks
+- [x] Add SSH key generation, selection, server installation, and login testing
 - [x] Add shortcut rebinding
 - [x] Lock the panel to a selected display and recover when that display disconnects
 - [x] Allow automatic hiding to be disabled in Settings

@@ -322,6 +322,19 @@ final class VisorWindowController: NSWindowController {
         }
     }
 
+    private func startUtility(title: String, command: [String]) {
+        do {
+            let session = try TerminalSession(title: title, command: command)
+            bind(session)
+            sessions.append(session)
+            selectedIndex = sessions.count - 1
+            rebuildTabs()
+            selectSession(selectedIndex)
+        } catch {
+            showError("Could not start \(title.lowercased()): \(error.localizedDescription)")
+        }
+    }
+
     private func bind(_ session: TerminalSession) {
         let terminal = TerminalWebView()
         terminal.translatesAutoresizingMaskIntoConstraints = false
@@ -460,6 +473,103 @@ final class VisorWindowController: NSWindowController {
         rebuildTabs()
     }
 
+    @objc private func chooseIdentityFile(_ sender: NSMenuItem) {
+        guard var profile = profile(from: sender) else { return }
+        let panel = NSOpenPanel()
+        panel.title = "Choose SSH Private Key"
+        panel.message = "Choose the private key. Its matching public key should be beside it with a .pub extension."
+        panel.prompt = "Choose Key"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.showsHiddenFiles = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh", isDirectory: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            profile.identityFile = SSHKeySupport.storablePath(url.path)
+            profileStore.save(profile)
+            rebuildBookmarks()
+        }
+    }
+
+    @objc private func generateIdentityFile(_ sender: NSMenuItem) {
+        guard var profile = profile(from: sender) else { return }
+        let sshDirectory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: sshDirectory, withIntermediateDirectories: true)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: sshDirectory.path)
+        } catch {
+            showError("Could not prepare ~/.ssh: \(error.localizedDescription)")
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.title = "Generate Ed25519 SSH Key"
+        panel.message = "Choose where to store the private key. The public key will use the same name with .pub added."
+        panel.prompt = "Generate Key"
+        panel.nameFieldStringValue = "id_ed25519"
+        panel.directoryURL = sshDirectory
+        panel.canCreateDirectories = true
+        panel.showsHiddenFiles = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let publicURL = URL(fileURLWithPath: url.path + ".pub")
+        guard !FileManager.default.fileExists(atPath: url.path),
+              !FileManager.default.fileExists(atPath: publicURL.path) else {
+            showError("A key already exists at that location. Choose the existing private key instead, or use a different name.")
+            return
+        }
+
+        profile.identityFile = SSHKeySupport.storablePath(url.path)
+        profileStore.save(profile)
+        rebuildBookmarks()
+        startUtility(title: "Create SSH key", command: SSHKeySupport.generationCommand(path: url.path))
+    }
+
+    @objc private func installIdentityFile(_ sender: NSMenuItem) {
+        guard let profile = profile(from: sender) else { return }
+        do {
+            let publicKey = try SSHKeySupport.readPublicKey(for: profile)
+            let alert = NSAlert()
+            alert.messageText = "Install Key on “\(profile.displayName)” ?"
+            alert.informativeText = "Visor will connect to \(profile.destination) and add the selected public key to ~/.ssh/authorized_keys if it is not already present. SSH may ask for the server password."
+            alert.addButton(withTitle: "Install Key")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            startUtility(
+                title: "Install key: \(profile.displayName)",
+                command: SSHKeySupport.installCommand(profile: profile, publicKey: publicKey)
+            )
+        } catch {
+            showError(error.localizedDescription)
+        }
+    }
+
+    @objc private func addIdentityFileToKeychain(_ sender: NSMenuItem) {
+        guard let profile = profile(from: sender) else { return }
+        do {
+            _ = try SSHKeySupport.validatePrivateKey(for: profile)
+            startUtility(
+                title: "Remember key: \(profile.displayName)",
+                command: try SSHKeySupport.keychainCommand(profile: profile)
+            )
+        } catch {
+            showError(error.localizedDescription)
+        }
+    }
+
+    @objc private func testIdentityFile(_ sender: NSMenuItem) {
+        guard let profile = profile(from: sender) else { return }
+        do {
+            _ = try SSHKeySupport.validatePrivateKey(for: profile)
+            startUtility(
+                title: "Test key: \(profile.displayName)",
+                command: SSHKeySupport.testCommand(profile: profile)
+            )
+        } catch {
+            showError(error.localizedDescription)
+        }
+    }
+
     @objc private func deleteProfile(_ sender: NSMenuItem) {
         guard let profile = profile(from: sender) else { return }
         let alert = NSAlert()
@@ -488,6 +598,13 @@ final class VisorWindowController: NSWindowController {
     private func profileMenu(for profile: SSHProfile) -> NSMenu {
         let menu = NSMenu(title: profile.displayName)
         menu.addItem(profileMenuItem("Connect", action: #selector(connectProfile(_:)), profile: profile))
+        menu.addItem(.separator())
+        menu.addItem(profileMenuItem("Choose Identity File…", action: #selector(chooseIdentityFile(_:)), profile: profile))
+        menu.addItem(profileMenuItem("Generate SSH Key…", action: #selector(generateIdentityFile(_:)), profile: profile))
+        menu.addItem(profileMenuItem("Add Key to macOS Keychain…", action: #selector(addIdentityFileToKeychain(_:)), profile: profile))
+        menu.addItem(profileMenuItem("Install Public Key…", action: #selector(installIdentityFile(_:)), profile: profile))
+        menu.addItem(profileMenuItem("Test Key Login", action: #selector(testIdentityFile(_:)), profile: profile))
+        menu.addItem(.separator())
         menu.addItem(profileMenuItem("Edit…", action: #selector(editProfile(_:)), profile: profile))
         menu.addItem(.separator())
         menu.addItem(profileMenuItem("Delete", action: #selector(deleteProfile(_:)), profile: profile))
